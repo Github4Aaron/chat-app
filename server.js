@@ -17,13 +17,12 @@ var Message = mongoose.model('Message', {
   message: String
 })
 
-var messages = [
-  {name: 'Aaron', message: 'hey from Aaron'},
-  {name: 'Susan', message: 'hey from Susan'},
-]
+
 
 app.get('/messages', (req, res) =>{
-  res.send(messages)
+  Message.find({}, (err, messages)=> {
+    res.send(messages)
+  })
 }) 
 
 app.post('/messages', (req, res) =>{
@@ -33,7 +32,16 @@ app.post('/messages', (req, res) =>{
     if (err)
       sendStatus(500)
 
-      messages.push(req.body)
+      Message.findOne({message: 'badword'}, (err, censored) => {
+        if (censored) {
+          console.log('censored words found', censored)
+          Message.remove({_id: censored.id}, (err) =>{
+            console.log('removed censored message')
+          })
+        }
+      })
+
+      
   io.emit('message', req.body)
   res.sendStatus(200)
   })
