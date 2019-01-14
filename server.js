@@ -10,6 +10,7 @@ app.use(express.static(__dirname))
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({extended:false}))
 
+mongoose.Promise = Promise
 var dburl = 'mongodb://user:dbpassword1@ds147684.mlab.com:47684/node-chat-app'
 
 var Message = mongoose.model('Message', {
@@ -28,26 +29,22 @@ app.get('/messages', (req, res) =>{
 app.post('/messages', (req, res) =>{
   var message = new Message(req.body)
 
-  message.save((err) => {
-    if (err)
-      sendStatus(500)
-
-      Message.findOne({message: 'badword'}, (err, censored) => {
-        if (censored) {
-          console.log('censored words found', censored)
-          Message.remove({_id: censored.id}, (err) =>{
-            console.log('removed censored message')
-          })
-        }
-      })
-
-      
-  io.emit('message', req.body)
-  res.sendStatus(200)
-  })
-
-}) 
-
+  message.save().then(()=> {
+    Message.findOne({message: 'badword'}, (err, censored) => {
+      if (censored) {
+        console.log('censored words found', censored)
+        Message.remove({_id: censored.id}, (err) =>{
+          console.log('removed censored message')
+        })
+      }
+    })
+    io.emit('message', req.body)
+    res.sendStatus(200)
+  }).catch((err) => {
+    res.sendStatus(500)
+    return console.error(err)
+  }) 
+})
 
 io.on('connection', (socket) => {
   console.log('a user connected')
@@ -60,4 +57,3 @@ mongoose.connect(dburl, (err)=>{
 var server = http.listen(3000, () => {
   console.log('The server is listening on port', server.address().port)
 })
-
